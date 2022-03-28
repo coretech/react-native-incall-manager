@@ -42,4 +42,7 @@ public class InCallManagerPackage implements ReactPackage {
         return Collections.emptyList();
     }
 
+    public static void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        InCallManagerModule.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    }
 }

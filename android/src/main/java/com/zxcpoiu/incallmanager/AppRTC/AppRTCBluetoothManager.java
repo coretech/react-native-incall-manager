@@ -10,6 +10,7 @@
 
 package com.zxcpoiu.incallmanager.AppRTC;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -226,7 +227,8 @@ public class AppRTCBluetoothManager {
    */
   public void start() {
     Log.d(TAG, "start");
-    if (!hasPermission(apprtcContext, android.Manifest.permission.BLUETOOTH)) {
+    if (!hasPermission(apprtcContext, android.Manifest.permission.BLUETOOTH)
+            || !hasPermission(apprtcContext, Manifest.permission.BLUETOOTH_CONNECT)) {
       Log.w(TAG, "Process (pid=" + Process.myPid() + ") lacks BLUETOOTH permission");
       return;
     }

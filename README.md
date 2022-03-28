@@ -151,7 +151,7 @@ InCallManager.start({media: 'audio'}); // audio/video, default: audio
 
 // --- On Call Hangup:
 InCallManager.stop();
-// ... it will also remove event listeners ...
+// ... it will also remote event listeners ...
 ```
 
 If you want to use ringback:
