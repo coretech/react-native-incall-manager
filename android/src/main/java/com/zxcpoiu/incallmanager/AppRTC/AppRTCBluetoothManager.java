@@ -227,8 +227,7 @@ public class AppRTCBluetoothManager {
    */
   public void start() {
     Log.d(TAG, "start");
-    if (!hasPermission(apprtcContext, android.Manifest.permission.BLUETOOTH)
-            || !hasPermission(apprtcContext, Manifest.permission.BLUETOOTH_CONNECT)) {
+    if (!hasPermission(apprtcContext, android.Manifest.permission.BLUETOOTH)) {
       Log.w(TAG, "Process (pid=" + Process.myPid() + ") lacks BLUETOOTH permission");
       return;
     }
