@@ -63,6 +63,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
+import java.lang.IllegalStateException;
 
 import com.zxcpoiu.incallmanager.AppRTC.AppRTCBluetoothManager;
 
@@ -1054,7 +1055,11 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
                     audioManager.setMode(AudioManager.MODE_RINGTONE);
                 }
                 updateAudioRoute();
-                mp.start();
+                try {
+                    mp.start();
+                } catch(IllegalStateException e) {
+                    // media player is not initialized
+                }
             }
         });
 
