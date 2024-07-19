@@ -1,76 +1,66 @@
-// Type definitions for react-native-incall-manager 3.2
-// Project: https://github.com/zxcpoiu/react-native-incall-manager#readme
-// Definitions by: Carlos Quiroga <https://github.com/KarlosQ>
-// Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
-// TypeScript Version: 2.8
-
-export interface StartSetup {
-    media?: string | undefined;
-    auto?: boolean | undefined;
-    ringback?: string | undefined;
-}
-
-export interface StopSetup {
-    busytone?: string | undefined;
-}
-
 declare class InCallManager {
-    start(setup?: StartSetup): void;
+  vibrate: boolean;
+  audioUriMap: {
+    ringtone: { _BUNDLE_: null; _DEFAULT_: null };
+    ringback: { _BUNDLE_: null; _DEFAULT_: null };
+    busytone: { _BUNDLE_: null; _DEFAULT_: null };
+  };
 
-    stop(setup?: StopSetup): void;
+  constructor();
 
-    turnScreenOff(): void;
+  start(setup?: {
+    auto?: boolean;
+    media?: "video" | "audio";
+    ringback?: string;
+  }): void;
 
-    turnScreenOn(): void;
+  stop(setup?: { busytone?: string }): void;
 
-    getIsWiredHeadsetPluggedIn(): Promise<any>;
+  turnScreenOff(): void;
 
-    setFlashOn(enable?: boolean, brightness?: number): number;
+  turnScreenOn(): void;
 
-    setKeepScreenOn(enable?: boolean): void;
+  getIsWiredHeadsetPluggedIn(): Promise<{ isWiredHeadsetPluggedIn: boolean }>;
 
-    setSpeakerphoneOn(enable?: boolean): void;
+  setFlashOn(enable: boolean, brightness: number): void;
 
-    setForceSpeakerphoneOn(_flag?: boolean): void;
+  setKeepScreenOn(enable: boolean): void;
 
-    setMicrophoneMute(enable?: boolean): void;
+  setSpeakerphoneOn(enable: boolean): void;
 
-    startRingtone(
-        ringtone?: string,
-        vibrate_pattern?: any[],
-        ios_category?: string,
-        seconds?: number
-    ): void;
+  setForceSpeakerphoneOn(flag: boolean): void;
 
-    stopRingtone(): void;
+  setMicrophoneMute(enable: boolean): void;
 
-    startRingback(ringback?: string): void;
+  startRingtone(
+    ringtone: string,
+    vibrate_pattern: number | number[],
+    ios_category: string,
+    seconds: number
+  ): void;
 
-    stopRingback(): void;
+  stopRingtone(): void;
 
-    checkRecordPermission(): Promise<string>;
+  startProximitySensor(): void;
 
-    requestRecordPermission(): Promise<string>;
+  stopProximitySensor(): void;
 
-    checkBluetoothConnectPermission(): Promise<string>;
+  startRingback(ringback: string): void;
 
-    requestBluetoothConnectPermission(): Promise<string>;
+  stopRingback(): void;
 
-    checkCameraPermission(): Promise<string>;
+  pokeScreen(timeout: number): void;
 
-    requestCameraPermission(): Promise<string>;
+  getAudioUri(audioType: string, fileType: string): Promise<string | null>;
 
-    pokeScreen(_timeout?: number): void;
+  chooseAudioRoute(route: string): Promise<any>;
 
-    getAudioUri(audioType: string, fileType: string): any;
+  getAudioDeviceStatus(): Promise<any>
 
-    chooseAudioRoute(route: any): any;
+  requestAudioFocus(): Promise<any>;
 
-    getAudioDeviceStatus(): Promise<any>
-    
-    startBluetoothManager(): Promise<any>
+  abandonAudioFocus(): Promise<any>;
 }
 
-declare const _default: InCallManager;
-
-export default _default;
+declare const inCallManager: InCallManager;
+export default inCallManager;

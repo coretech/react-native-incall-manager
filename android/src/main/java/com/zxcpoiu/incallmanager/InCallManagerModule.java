@@ -160,7 +160,7 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
     private final String useSpeakerphone = SPEAKERPHONE_AUTO;
 
     // Handles all tasks related to Bluetooth headset devices.
-    private final AppRTCBluetoothManager bluetoothManager;
+    private AppRTCBluetoothManager bluetoothManager = null;
 
     private final InCallProximityManager proximityManager;
 
@@ -201,22 +201,27 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
         mRequestPermissionCodePromises = new SparseArray<Promise>();
         mRequestPermissionCodeTargetPermission = new SparseArray<String>();
         mOnFocusChangeListener = new OnFocusChangeListener();
-        bluetoothManager = AppRTCBluetoothManager.create(reactContext, this);
-        proximityManager = InCallProximityManager.create(reactContext, this);
         wakeLockUtils = new InCallWakeLockUtils(reactContext);
+        proximityManager = InCallProximityManager.create(reactContext, this);
+
+        UiThreadUtil.runOnUiThread(() -> {
+            bluetoothManager = AppRTCBluetoothManager.create(reactContext, this);
+        });
 
         Log.d(TAG, "InCallManager initialized");
     }
 
     private void manualTurnScreenOff() {
         Log.d(TAG, "manualTurnScreenOff()");
+        Activity mCurrentActivity = getCurrentActivity();
+
+        if (mCurrentActivity == null) {
+            Log.d(TAG, "ReactContext doesn't have any Activity attached.");
+            return;
+        }
+
         UiThreadUtil.runOnUiThread(new Runnable() {
             public void run() {
-                Activity mCurrentActivity = getCurrentActivity();
-                if (mCurrentActivity == null) {
-                    Log.d(TAG, "ReactContext doesn't hava any Activity attached.");
-                    return;
-                }
                 Window window = mCurrentActivity.getWindow();
                 WindowManager.LayoutParams params = window.getAttributes();
                 lastLayoutParams = params; // --- store last param
@@ -229,13 +234,15 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
 
     private void manualTurnScreenOn() {
         Log.d(TAG, "manualTurnScreenOn()");
+        Activity mCurrentActivity = getCurrentActivity();
+
+        if (mCurrentActivity == null) {
+            Log.d(TAG, "ReactContext doesn't have any Activity attached.");
+            return;
+        }
+
         UiThreadUtil.runOnUiThread(new Runnable() {
             public void run() {
-                Activity mCurrentActivity = getCurrentActivity();
-                if (mCurrentActivity == null) {
-                    Log.d(TAG, "ReactContext doesn't hava any Activity attached.");
-                    return;
-                }
                 Window window = mCurrentActivity.getWindow();
                 if (lastLayoutParams != null) {
                     window.setAttributes(lastLayoutParams);
@@ -296,12 +303,7 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
                     }
                 }
             };
-            ReactContext reactContext = getReactApplicationContext();
-            if (reactContext != null) {
-                reactContext.registerReceiver(wiredHeadsetReceiver, filter);
-            } else {
-                Log.d(TAG, "startWiredHeadsetEvent() reactContext is null");
-            }
+            this.registerReceiver(wiredHeadsetReceiver, filter);
         }
     }
 
@@ -326,12 +328,7 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
                     }
                 }
             };
-            ReactContext reactContext = getReactApplicationContext();
-            if (reactContext != null) {
-                reactContext.registerReceiver(noisyAudioReceiver, filter);
-            } else {
-                Log.d(TAG, "startNoisyAudioEvent() reactContext is null");
-            }
+            this.registerReceiver(noisyAudioReceiver, filter);
         }
     }
 
@@ -393,12 +390,8 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
                     }
                 }
             };
-            ReactContext reactContext = getReactApplicationContext();
-            if (reactContext != null) {
-                reactContext.registerReceiver(mediaButtonReceiver, filter);
-            } else {
-                Log.d(TAG, "startMediaButtonEvent() reactContext is null");
-            }
+
+            this.registerReceiver(mediaButtonReceiver, filter);
         }
     }
 
@@ -575,7 +568,9 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
             storeOriginalAudioSetup();
             requestAudioFocus();
             startEvents();
-            bluetoothManager.start();
+            UiThreadUtil.runOnUiThread(() -> {
+                bluetoothManager.start();
+            });
             // TODO: even if not acquired focus, we can still play sounds. but need figure out which is better.
             //getCurrentActivity().setVolumeControlStream(AudioManager.STREAM_VOICE_CALL);
             audioManager.setMode(defaultAudioMode);
@@ -625,7 +620,9 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
                 setSpeakerphoneOn(false);
                 setMicrophoneMute(false);
                 forceSpeakerOn = 0;
-                bluetoothManager.stop();
+                UiThreadUtil.runOnUiThread(() -> {
+                    bluetoothManager.stop();
+                });
                 restoreOriginalAudioSetup();
                 releaseAudioFocus();
                 audioManagerActivated = false;
@@ -741,14 +738,18 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
     @ReactMethod
     public void setKeepScreenOn(final boolean enable) {
         Log.d(TAG, "setKeepScreenOn() " + enable);
+
+        Activity mCurrentActivity = getCurrentActivity();
+
+        if (mCurrentActivity == null) {
+            Log.d(TAG, "ReactContext doesn't have any Activity attached.");
+            return;
+        }
+
         UiThreadUtil.runOnUiThread(new Runnable() {
             public void run() {
-                Activity mCurrentActivity = getCurrentActivity();
-                if (mCurrentActivity == null) {
-                    Log.d(TAG, "ReactContext doesn't hava any Activity attached.");
-                    return;
-                }
                 Window window = mCurrentActivity.getWindow();
+
                 if (enable) {
                     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 } else {
@@ -762,6 +763,7 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
     public void setSpeakerphoneOn(final boolean enable) {
         if (enable != audioManager.isSpeakerphoneOn())  {
             Log.d(TAG, "setSpeakerphoneOn(): " + enable);
+	    audioManager.setMode(defaultAudioMode);
             audioManager.setSpeakerphoneOn(enable);
         }
     }
@@ -1728,7 +1730,16 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
 
     /** Helper method for receiver registration. */
     private void registerReceiver(BroadcastReceiver receiver, IntentFilter filter) {
-        getReactApplicationContext().registerReceiver(receiver, filter);
+        final ReactContext reactContext = getReactApplicationContext();
+        if (reactContext != null) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                reactContext.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED);
+            } else {
+                reactContext.registerReceiver(receiver, filter);
+            }
+        }  else {
+            Log.d(TAG, "registerReceiver() reactContext is null");
+        }
     }
 
     /** Helper method for unregistration of an existing receiver. */
@@ -1793,12 +1804,19 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
                 } else if (type == AudioDeviceInfo.TYPE_USB_DEVICE) {
                     Log.d(TAG, "hasWiredHeadset: found USB audio device");
                     return true;
+                } else if (type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES) {
+                    Log.d(TAG, "hasWiredHeadset: found wired headphones");
+                    return true;
                 }
             }
             return false;
         }
     }
 
+    @ReactMethod
+    public void getIsWiredHeadsetPluggedIn(Promise promise) {
+        promise.resolve(this.hasWiredHeadset());
+    }
 
     /**
      * Updates list of possible audio devices and make new device selection.
@@ -1899,10 +1917,90 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
                 // Notify a listening client that audio device has been changed.
                 audioManagerEvents.onAudioDeviceChanged(selectedAudioDevice, audioDevices);
             }
-            */
-            sendEvent("onAudioDeviceChanged", getAudioDeviceStatusMap());
-        }
-        Log.d(TAG, "--- updateAudioDeviceState done");
+
+            // Update the set of available audio devices.
+            Set<AudioDevice> newAudioDevices = new HashSet<>();
+
+            // always assume device has speaker phone
+            newAudioDevices.add(AudioDevice.SPEAKER_PHONE);
+
+            if (bluetoothManager.getState() == AppRTCBluetoothManager.State.SCO_CONNECTED
+                    || bluetoothManager.getState() == AppRTCBluetoothManager.State.SCO_CONNECTING
+                    || bluetoothManager.getState() == AppRTCBluetoothManager.State.HEADSET_AVAILABLE) {
+                newAudioDevices.add(AudioDevice.BLUETOOTH);
+            }
+
+            if (hasWiredHeadset) {
+                newAudioDevices.add(AudioDevice.WIRED_HEADSET);
+            }
+
+            if (hasEarpiece()) {
+                newAudioDevices.add(AudioDevice.EARPIECE);
+            }
+
+            // --- check whether user selected audio device is available
+            if (userSelectedAudioDevice != null
+                    && userSelectedAudioDevice != AudioDevice.NONE
+                    && !newAudioDevices.contains(userSelectedAudioDevice)) {
+                userSelectedAudioDevice = AudioDevice.NONE;
+            }
+
+            // Store state which is set to true if the device list has changed.
+            boolean audioDeviceSetUpdated = !audioDevices.equals(newAudioDevices);
+            // Update the existing audio device set.
+            audioDevices = newAudioDevices;
+
+            AudioDevice newAudioDevice = getPreferredAudioDevice();
+
+            // --- stop bluetooth if needed
+            if (selectedAudioDevice == AudioDevice.BLUETOOTH
+                    && newAudioDevice != AudioDevice.BLUETOOTH
+                    && (bluetoothManager.getState() == AppRTCBluetoothManager.State.SCO_CONNECTED
+                        || bluetoothManager.getState() == AppRTCBluetoothManager.State.SCO_CONNECTING)
+                    ) {
+                bluetoothManager.stopScoAudio();
+                bluetoothManager.updateDevice();
+            }
+
+            // --- start bluetooth if needed
+            if (selectedAudioDevice != AudioDevice.BLUETOOTH
+                    && newAudioDevice == AudioDevice.BLUETOOTH
+                    && bluetoothManager.getState() == AppRTCBluetoothManager.State.HEADSET_AVAILABLE) {
+                // Attempt to start Bluetooth SCO audio (takes a few second to start).
+                if (!bluetoothManager.startScoAudio()) {
+                    // Remove BLUETOOTH from list of available devices since SCO failed.
+                    audioDevices.remove(AudioDevice.BLUETOOTH);
+                    audioDeviceSetUpdated = true;
+                    if (userSelectedAudioDevice == AudioDevice.BLUETOOTH) {
+                        userSelectedAudioDevice = AudioDevice.NONE;
+                    }
+                    newAudioDevice = getPreferredAudioDevice();
+                }
+            }
+            
+            if (newAudioDevice == AudioDevice.BLUETOOTH
+                    && bluetoothManager.getState() != AppRTCBluetoothManager.State.SCO_CONNECTED) {
+                newAudioDevice = getPreferredAudioDevice(true); // --- skip bluetooth
+            }
+
+            // Switch to new device but only if there has been any changes.
+            if (newAudioDevice != selectedAudioDevice || audioDeviceSetUpdated) {
+
+                // Do the required device switch.
+                setAudioDeviceInternal(newAudioDevice);
+                Log.d(TAG, "New device status: "
+                                + "available=" + audioDevices + ", "
+                                + "selected=" + newAudioDevice);
+                /*
+                if (audioManagerEvents != null) {
+                    // Notify a listening client that audio device has been changed.
+                    audioManagerEvents.onAudioDeviceChanged(selectedAudioDevice, audioDevices);
+                }
+                */
+                sendEvent("onAudioDeviceChanged", getAudioDeviceStatusMap());
+            }
+            Log.d(TAG, "--- updateAudioDeviceState done");
+        });
     }
 
     private WritableMap getAudioDeviceStatusMap() {
