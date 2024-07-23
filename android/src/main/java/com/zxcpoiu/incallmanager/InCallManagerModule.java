@@ -1906,101 +1906,15 @@ public class InCallManagerModule extends ReactContextBaseJavaModule implements L
 
         // Switch to new device but only if there has been any changes.
         if (newAudioDevice != selectedAudioDevice || audioDeviceSetUpdated) {
-
             // Do the required device switch.
             setAudioDeviceInternal(newAudioDevice);
             Log.d(TAG, "New device status: "
                     + "available=" + audioDevices + ", "
                     + "selected=" + newAudioDevice);
-            /*
-            if (audioManagerEvents != null) {
-                // Notify a listening client that audio device has been changed.
-                audioManagerEvents.onAudioDeviceChanged(selectedAudioDevice, audioDevices);
-            }
 
-            // Update the set of available audio devices.
-            Set<AudioDevice> newAudioDevices = new HashSet<>();
-
-            // always assume device has speaker phone
-            newAudioDevices.add(AudioDevice.SPEAKER_PHONE);
-
-            if (bluetoothManager.getState() == AppRTCBluetoothManager.State.SCO_CONNECTED
-                    || bluetoothManager.getState() == AppRTCBluetoothManager.State.SCO_CONNECTING
-                    || bluetoothManager.getState() == AppRTCBluetoothManager.State.HEADSET_AVAILABLE) {
-                newAudioDevices.add(AudioDevice.BLUETOOTH);
-            }
-
-            if (hasWiredHeadset) {
-                newAudioDevices.add(AudioDevice.WIRED_HEADSET);
-            }
-
-            if (hasEarpiece()) {
-                newAudioDevices.add(AudioDevice.EARPIECE);
-            }
-
-            // --- check whether user selected audio device is available
-            if (userSelectedAudioDevice != null
-                    && userSelectedAudioDevice != AudioDevice.NONE
-                    && !newAudioDevices.contains(userSelectedAudioDevice)) {
-                userSelectedAudioDevice = AudioDevice.NONE;
-            }
-
-            // Store state which is set to true if the device list has changed.
-            boolean audioDeviceSetUpdated = !audioDevices.equals(newAudioDevices);
-            // Update the existing audio device set.
-            audioDevices = newAudioDevices;
-
-            AudioDevice newAudioDevice = getPreferredAudioDevice();
-
-            // --- stop bluetooth if needed
-            if (selectedAudioDevice == AudioDevice.BLUETOOTH
-                    && newAudioDevice != AudioDevice.BLUETOOTH
-                    && (bluetoothManager.getState() == AppRTCBluetoothManager.State.SCO_CONNECTED
-                        || bluetoothManager.getState() == AppRTCBluetoothManager.State.SCO_CONNECTING)
-                    ) {
-                bluetoothManager.stopScoAudio();
-                bluetoothManager.updateDevice();
-            }
-
-            // --- start bluetooth if needed
-            if (selectedAudioDevice != AudioDevice.BLUETOOTH
-                    && newAudioDevice == AudioDevice.BLUETOOTH
-                    && bluetoothManager.getState() == AppRTCBluetoothManager.State.HEADSET_AVAILABLE) {
-                // Attempt to start Bluetooth SCO audio (takes a few second to start).
-                if (!bluetoothManager.startScoAudio()) {
-                    // Remove BLUETOOTH from list of available devices since SCO failed.
-                    audioDevices.remove(AudioDevice.BLUETOOTH);
-                    audioDeviceSetUpdated = true;
-                    if (userSelectedAudioDevice == AudioDevice.BLUETOOTH) {
-                        userSelectedAudioDevice = AudioDevice.NONE;
-                    }
-                    newAudioDevice = getPreferredAudioDevice();
-                }
-            }
-            
-            if (newAudioDevice == AudioDevice.BLUETOOTH
-                    && bluetoothManager.getState() != AppRTCBluetoothManager.State.SCO_CONNECTED) {
-                newAudioDevice = getPreferredAudioDevice(true); // --- skip bluetooth
-            }
-
-            // Switch to new device but only if there has been any changes.
-            if (newAudioDevice != selectedAudioDevice || audioDeviceSetUpdated) {
-
-                // Do the required device switch.
-                setAudioDeviceInternal(newAudioDevice);
-                Log.d(TAG, "New device status: "
-                                + "available=" + audioDevices + ", "
-                                + "selected=" + newAudioDevice);
-                /*
-                if (audioManagerEvents != null) {
-                    // Notify a listening client that audio device has been changed.
-                    audioManagerEvents.onAudioDeviceChanged(selectedAudioDevice, audioDevices);
-                }
-                */
-                sendEvent("onAudioDeviceChanged", getAudioDeviceStatusMap());
-            }
-            Log.d(TAG, "--- updateAudioDeviceState done");
-        });
+            sendEvent("onAudioDeviceChanged", getAudioDeviceStatusMap());
+        }
+        Log.d(TAG, "--- updateAudioDeviceState done");
     }
 
     private WritableMap getAudioDeviceStatusMap() {
